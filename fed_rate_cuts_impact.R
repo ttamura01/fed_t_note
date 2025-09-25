@@ -1,6 +1,6 @@
 ### To Study Historical Fed's Rate-cuts and impacts to Treasury Yield and Mortgage Rates 
 ## 2025-09-25
-
+getwd()
 # Install/load required packages
 library(tidyverse)
 library(lubridate)
