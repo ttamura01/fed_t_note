@@ -96,4 +96,4 @@ longer_df %>%
         
   )
 
-ggsave("fed_rate_cut_tnote_mortgage.png", width = 6.3, height = 5.8)
+ggsave("fed_rate_cut_tnote_mortgage.png", width = 6.3, height = 5.7)
