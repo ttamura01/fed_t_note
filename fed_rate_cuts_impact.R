@@ -1,6 +1,7 @@
 ### To Study Historical Fed's Rate-cuts and impacts to Treasury Yield and Mortgage Rates 
 ## 2025-09-25
-getwd()
+
+setwd("/Users/takayukitamura/Documents/R_Computing/fed_rate_cut")
 # Install/load required packages
 library(tidyverse)
 library(lubridate)
@@ -10,59 +11,44 @@ library(plotly)
 library(quantmod)   # for Fed Funds
 library(fredr) 
 
-# download data from FRED 
+#Set my FRED API key
+fredr_set_key("0c5fd2514c7d98427fe3c931e2fcb244")
 
-# t_note <- fredr(series_id = "DGS10") %>% 
-#   select(date, yld_10y = value)
-# 
-# fed_rate <- fredr(series_id = "FEDFUNDS") %>% 
-#   select(date, f_rate = value)
-# 
-# mortgage_30y <- fredr(series_id = "MORTGAGE30US") %>% 
-#   select(date, mortgage_30y = value)
+t_note <- fredr(series_id = "DGS10") %>% 
+  select(date, yld_10y = value)
 
-fed_treasury_mortgage <- read_csv("fed_treasury_mortgage.csv")
+fed_rate <- fredr(series_id = "FEDFUNDS") %>% 
+  select(date, f_rate = value)
 
-head(fed_treasury_mortgage)
-tail(fed_treasury_mortgage)
-fed_treasury_mortgage %>% 
-  arrange(date) %>% tail(10)
-sapply(fed_treasury_mortgage, class)
+mortgage_30y <- fredr(series_id = "MORTGAGE30US") %>% 
+  select(date, mortgage_30y = value)
 
-fed_treasury_mortgage <- fed_treasury_mortgage[-c(455, 456), ]
+#df <- 
+df <- fed_rate %>% 
+  left_join(., t_note, by = "date") %>% 
+  left_join(., mortgage_30y, by = "date") %>% 
+  arrange(date) %>% 
+  mutate(f_rate = zoo::na.locf(f_rate, na.rm = FALSE),
+         yld_10y = zoo::na.locf(yld_10y, na.rm = FALSE),
+         mortgage_30y = zoo::na.locf(mortgage_30y, na.rm = FALSE)) %>% 
+  filter(date >= "1988-01-01") %>% 
+  na.omit()
 
-# combine 3 data to 1 df
-# fed_treasury_mortgage <- fed_rate %>% 
-#   left_join(., t_note, by = "date") %>% 
-#   left_join(., mortgage_30y, by = "date") %>% 
-#   arrange(date) %>% 
-#   mutate(f_rate = zoo::na.locf(f_rate, na.rm = FALSE),
-#          yld_10y = zoo::na.locf(yld_10y, na.rm = FALSE),
-#          mortgage_30y = zoo::na.locf(mortgage_30y, na.rm = FALSE)) %>% 
-#   filter(date >= "1988-01-01") %>% 
-#   na.omit()
+updates <- tribble(~date, ~f_rate, ~yld_10y, ~mortgage_30y,
+                   "2025-11-01", 3.88, 4.10, 6.26)
 
-# update the df with the latest numbers
-# updates <- tribble(~date, ~f_rate, ~yld_10y, ~mortgage_30y,
-#                    "2025-09-01", 4.33, 4.28, 6.5,
-#                    "2025-09-22", 4.14, 4.08, 6.20)
-# 
-# updates$date <- as.Date(updates$date)
-# 
-# fed_treasury_mortgage <- rbind(df, updates)
+updates$date <- as.Date(updates$date)
 
-# write_csv(fed_treasury_mortgage, "fed_treasury_mortgage.csv")
+df <- rbind(df, updates)
 
-latest_data <- fed_treasury_mortgage %>% 
+latest_data <- df %>% 
   slice_max(date)
 
-longer_df <- fed_treasury_mortgage %>%   
+longer_df <- df %>%   
   pivot_longer(-date)
 
-
-
-order_levels <- fed_treasury_mortgage %>% 
-  filter(date == max(fed_treasury_mortgage$date)) %>% 
+order_levels <- df %>% 
+  filter(date == max(df$date)) %>% 
   select(-date) %>% 
   pivot_longer(everything(), names_to = "name", values_to = "value") %>% 
   # arrange(desc(case == "Average"), desc(percentage)) %>% 
@@ -79,8 +65,8 @@ longer_df %>%
                "f_rate" = "#D81B60",
                "yld_10y" = "#004D40"),
     labels = c("30-Year Mortgage Rate",
-               "Effective Federal Funds Rate",
-               "10-Year Treasury Yield")
+               "10-Year Treasury Yield",
+               "Effective Federal Funds Rate")
   ) +
   labs(x = NULL, y = NULL,
        title = "Effective Federal Fund Rate, 10-Year Treasury Yield and 30-Year Mortgage Rate since 1989") +
@@ -95,5 +81,3 @@ longer_df %>%
         plot.title = element_textbox_simple(size = 16, face = "bold", margin = margin(t = 10, b = 10))
         
   )
-
-ggsave("fed_rate_cut_tnote_mortgage.png", width = 6.3, height = 5.7)
